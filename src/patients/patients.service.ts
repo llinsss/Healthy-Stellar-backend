@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 import { Patient } from './entities/patient.entity';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { generateMRN } from './utils/mrn.generator';
-import { UpdatePatientPhotoDto } from './dto/update-patient-photo.dto';
-import { Express } from 'express';
+
 @Injectable()
 export class PatientsService {
   constructor(
@@ -29,7 +28,7 @@ export class PatientsService {
       mrn: generateMRN(),
       isAdmitted: false,
       isActive: true,
-    } as Patient);
+    } as any as Patient );
 
     return this.patientRepo.save(patient);
   }

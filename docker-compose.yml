@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # Main Application
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=medical_user
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - DB_NAME=healthy_stellar
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET_FILE=/run/secrets/jwt_secret
+    secrets:
+      - db_password
+      - jwt_secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - medical_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL with Encryption
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=healthy_stellar
+      - POSTGRES_USER=medical_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=scram-sha-256
+    secrets:
+      - db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    networks:
+      - medical_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medical_user -d healthy_stellar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Session Management
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --save 900 1 --save 300 10
+    environment:
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password
+    secrets:
+      - redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - medical_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    environment:
+      - PGPASSWORD_FILE=/run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - backup_data:/backups
+      - ./docker/backup/backup.sh:/backup.sh:ro
+    command: sh -c "chmod +x /backup.sh && crond -f"
+    depends_on:
+      - postgres
+    networks:
+      - medical_network
+    restart: unless-stopped
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - medical_network
+    restart: unless-stopped
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD_FILE=/run/secrets/grafana_password
+    secrets:
+      - grafana_password
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - medical_network
+    restart: unless-stopped
+
+  # Log Management
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - medical_network
+    restart: unless-stopped
+
+networks:
+  medical_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backup_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  grafana_password:
+    file: ./secrets/grafana_password.txt
