@@ -1,0 +1,117 @@
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { User, UserRole } from '../entities/user.entity';
+
+export interface JwtPayload {
+  userId: string;
+  email: string;
+  role: UserRole;
+  mfaEnabled: boolean;
+  sessionId: string;
+}
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  refreshExpiresIn: number;
+}
+
+@Injectable()
+export class AuthTokenService {
+  constructor(
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
+
+  /**
+   * Generate JWT access token for authenticated user
+   */
+  generateAccessToken(user: User, sessionId: string, mfaVerified: boolean = false): string {
+    const payload: JwtPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      mfaEnabled: user.mfaEnabled && mfaVerified,
+      sessionId,
+    };
+
+    return this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('JWT_EXPIRATION', '15m'),
+      secret: this.configService.get<string>('JWT_SECRET'),
+      algorithm: 'HS512', // High security algorithm
+      issuer: 'healthy-stellar-auth',
+      audience: 'healthy-stellar-api',
+    });
+  }
+
+  /**
+   * Generate refresh token for session renewal
+   */
+  generateRefreshToken(user: User, sessionId: string): string {
+    const payload = {
+      userId: user.id,
+      sessionId,
+      type: 'refresh',
+    };
+
+    return this.jwtService.sign(payload, {
+      expiresIn: this.configService.get<string>('REFRESH_TOKEN_EXPIRATION', '7d'),
+      secret: this.configService.get<string>('REFRESH_TOKEN_SECRET'),
+      algorithm: 'HS512',
+      issuer: 'healthy-stellar-auth',
+      audience: 'healthy-stellar-api',
+    });
+  }
+
+  /**
+   * Generate tokens for completed authentication
+   */
+  generateTokenPair(user: User, sessionId: string, mfaVerified: boolean = false): TokenPair {
+    const accessToken = this.generateAccessToken(user, sessionId, mfaVerified);
+    const refreshToken = this.generateRefreshToken(user, sessionId);
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 900, // 15 minutes in seconds
+      refreshExpiresIn: 604800, // 7 days in seconds
+    };
+  }
+
+  /**
+   * Verify access token
+   */
+  verifyAccessToken(token: string): JwtPayload | null {
+    try {
+      return this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        algorithms: ['HS512'],
+      });
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Verify refresh token
+   */
+  verifyRefreshToken(token: string): any {
+    try {
+      return this.jwtService.verify(token, {
+        secret: this.configService.get<string>('REFRESH_TOKEN_SECRET'),
+        algorithms: ['HS512'],
+      });
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Decode token without verification
+   */
+  decodeToken(token: string): any {
+    return this.jwtService.decode(token);
+  }
+}
