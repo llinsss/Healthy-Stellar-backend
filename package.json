@@ -15,7 +15,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:unit": "jest --testPathIgnorePatterns=e2e --testPathIgnorePatterns=performance --testPathIgnorePatterns=compliance",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:compliance": "jest --testMatch='**/test/compliance/**/*.spec.ts'",
+    "test:performance": "jest --testMatch='**/test/performance/**/*.spec.ts' --runInBand",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.config.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.config.ts",
@@ -67,6 +70,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^9.3.0",
     "@nestjs/cli": "^11.0.16",
     "@nestjs/testing": "^11.1.12",
     "@types/argon2": "^0.14.1",
