@@ -12,6 +12,7 @@ import { LaboratoryModule } from './laboratory/laboratory.module';
 import { DiagnosisModule } from './diagnosis/diagnosis.module';
 import { TreatmentPlanningModule } from './treatment-planning/treatment-planning.module';
 import { PharmacyModule } from './pharmacy/pharmacy.module';
+import { InfectionControlModule } from './infection-control/infection-control.module';
 import { DatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -48,7 +49,8 @@ import { AuditLogEntity } from './common/audit/audit-log.entity';
     DiagnosisModule,
     TreatmentPlanningModule,
     PharmacyModule,
-    ValidationModule
+    ValidationModule,
+    InfectionControlModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
