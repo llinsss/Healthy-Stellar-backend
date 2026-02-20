@@ -81,12 +81,19 @@ services:
     image: postgres:15-alpine
     environment:
       - PGPASSWORD_FILE=/run/secrets/db_password
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=healthy_stellar
+      - DB_USERNAME=medical_user
+      - BACKUP_RETENTION_DAYS=90
+      - BACKUP_ENCRYPTION_KEY_FILE=/run/secrets/backup_encryption_key
     secrets:
       - db_password
+      - backup_encryption_key
     volumes:
       - backup_data:/backups
       - ./docker/backup/backup.sh:/backup.sh:ro
-    command: sh -c "chmod +x /backup.sh && crond -f"
+    command: sh -c "chmod +x /backup.sh && /backup.sh setup && crond -f"
     depends_on:
       - postgres
     networks:
@@ -204,3 +211,5 @@ secrets:
     file: ./secrets/jwt_secret.txt
   grafana_password:
     file: ./secrets/grafana_password.txt
+  backup_encryption_key:
+    file: ./secrets/backup_encryption_key.txt
