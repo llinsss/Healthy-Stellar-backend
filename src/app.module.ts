@@ -24,6 +24,7 @@ import { ValidationModule } from './common/validation/validation.module';
 import { MedicalEmergencyErrorFilter } from './common/errors/medical-emergency-error.filter';
 import { MedicalDataValidationPipe } from './common/validation/medical-data.validator.pipe';
 import { NotificationsModule } from './notifications/notifications.module';
+import { QueueModule } from './queues/queue.module';
 
 const hasBearerAuthUser = (req: any): boolean => {
   const authHeader = req?.headers?.authorization;
@@ -141,6 +142,7 @@ const getUserTrackerFromRequest = (req: any): string => {
     ValidationModule,
     InfectionControlModule,
     NotificationsModule,
+    QueueModule,
     AccessControlModule,
   ],
   controllers: [AppController, HealthController],
