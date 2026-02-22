@@ -63,6 +63,11 @@ Thumbs.db
 *.p12
 *.pfx
 
+# Benchmark and Performance Reports
+benchmark-*.txt
+explain-*.txt
+performance-report-*.json
+
 # Backup files
 *.backup
 *.bak
@@ -87,3 +92,9 @@ docker-compose.override.yml
 # Local configuration
 .env.*.local
 config.local.json
+backup_*.sql
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

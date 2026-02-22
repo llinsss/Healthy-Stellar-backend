@@ -24,6 +24,8 @@
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.config.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
     "seed": "ts-node -r tsconfig-paths/register src/database/seeder.ts"
+    "benchmark:db": "ts-node scripts/benchmark-database-performance.ts",
+    "explain:queries": "ts-node scripts/explain-query-plans.ts"
   },
   "repository": {
     "type": "git",
@@ -54,6 +56,7 @@
     "@nestjs/typeorm": "^10.0.1",
     "@nestjs/websockets": "^11.1.14",
     "argon2": "^0.44.0",
+    "axios": "^1.6.5",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.70.0",
     "class-transformer": "^0.5.1",
